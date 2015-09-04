@@ -19,11 +19,13 @@ import sys
 import urllib
 import webbrowser
 
+from pyshorteners.shorteners import Shortener
+
 PIPELINES = ('check', 'gate')
 COLORS = (
     ('ff0000', 'b00000'),
-    ('00ff00', '00b000'),
     ('0000ff', '0000b0'),
+    ('00ff00', '00b000'),
 )
 
 
@@ -80,6 +82,8 @@ def main():
         targetlist = "&".join([targetlist, subtarglist])
     url = "&".join((graphite_base_url(), targetlist))
     webbrowser.open(url)
+    shortener = Shortener('TinyurlShortener')
+    print "URL for sharing: %s" % shortener.short(url)
 
 
 if __name__ == "__main__":
