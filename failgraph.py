@@ -15,9 +15,12 @@
 # under the License.
 
 import argparse
+import json
 import sys
 import urllib
 import webbrowser
+
+import requests
 
 from pyshorteners.shorteners import Shortener
 
@@ -60,14 +63,25 @@ def failrate(job, queue, color, width=1):
              'color': color, 'title': title, 'width': width})
 
 
+def target_in_pipeline(target, pipeline):
+    json_data = ("http://graphite.openstack.org/render?target="
+               "stats.zuul.pipeline.%s.job.%s.*&format=json" %
+               (pipeline, target))
+    resp = requests.get(json_data)
+    data = json.loads(resp.content)
+    # if the data is blank, this doesn't exist on the graphite server at all
+    return data != []
+
+
 def get_targets(target, colors, avg=12):
     targets = []
     color = 0
     width = 1
     for pipeline in PIPELINES:
-        targets.append(failrate(target, pipeline, colors[color], width))
-        width += 1
-        color += 1
+        if target_in_pipeline(target, pipeline):
+            targets.append(failrate(target, pipeline, colors[color], width))
+            width += 1
+            color += 1
     return targets
 
 
