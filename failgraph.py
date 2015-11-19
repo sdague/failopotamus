@@ -44,7 +44,7 @@ def graphite_base_url(since=200):
     return ("http://graphite.openstack.org/render/?from=-%dhours"
             "&height=500&until=now&width=800&bgcolor=ffffff"
             "&fgcolor=000000&yMax=100&yMin=0&vtitle=%s"
-            "&title=%s"
+            "&title=%s&drawNullAsZero=true"
     ) % (since, ylabel, title)
 
 
@@ -54,8 +54,9 @@ def failrate(job, queue, color, width=1):
             "alias("
             "movingAverage("
             "asPercent("
-            "stats.zuul.pipeline.%(queue)s.job.%(job)s.FAILURE,"
-            "sum(stats.zuul.pipeline.%(queue)s.job.%(job)s.{SUCCESS,FAILURE}))"
+            "transformNull("
+            "stats_counts.zuul.pipeline.%(queue)s.job.%(job)s.FAILURE),"
+            "transformNull(sum(stats_counts.zuul.pipeline.%(queue)s.job.%(job)s.{SUCCESS,FAILURE})))"
             ",%%27%(time)shours%%27),%%20%%27%(title)s%%27),"
             "%%27%(color)s%%27),"
             "%(width)s)" %
