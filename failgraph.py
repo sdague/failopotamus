@@ -33,14 +33,26 @@ COLORS = (
 
 
 def parse_args():
-    parser = argparse.ArgumentParser('failgraph')
+    parser = argparse.ArgumentParser(
+        'failgraph',
+        description="""
+    Generate nice failure graphs from graphite based on job name.
+    """)
+    parser.add_argument('-d', '--duration',
+                        type=int, default=200,
+                        help="Graph over ``duration`` hours (default 200)"
+    )
+    parser.add_argument('-s', '--smoothing',
+                       type=int, default=12,
+                       help="Rolling average hours (defaults to 12)")
     parser.add_argument('tests', metavar='testname', nargs='+')
     return parser.parse_args()
 
 
-def graphite_base_url(since=200):
+def graphite_base_url(since, avg):
     ylabel = urllib.quote("Failure Rate in Percent")
-    title = urllib.quote("Test failure rates over last %s hours" % since)
+    title = urllib.quote("Test failure rates over last %s hours "
+                         "(%s hour rolling average)" % (since, avg))
     return ("http://graphite.openstack.org/render/?from=-%dhours"
             "&height=500&until=now&width=800&bgcolor=ffffff"
             "&fgcolor=000000&yMax=100&yMin=0&vtitle=%s"
@@ -48,7 +60,7 @@ def graphite_base_url(since=200):
     ) % (since, ylabel, title)
 
 
-def failrate(job, queue, color, width=1):
+def failrate(job, queue, color, width=1, avg=12):
     title = urllib.quote("%s (%s)" % (job, queue))
     return ("target=lineWidth(color("
             "alias("
@@ -56,11 +68,12 @@ def failrate(job, queue, color, width=1):
             "asPercent("
             "transformNull("
             "stats_counts.zuul.pipeline.%(queue)s.job.%(job)s.FAILURE),"
-            "transformNull(sum(stats_counts.zuul.pipeline.%(queue)s.job.%(job)s.{SUCCESS,FAILURE})))"
+            "transformNull(sum(stats_counts.zuul.pipeline.%(queue)s."
+            "job.%(job)s.{SUCCESS,FAILURE})))"
             ",%%27%(time)shours%%27),%%20%%27%(title)s%%27),"
             "%%27%(color)s%%27),"
             "%(width)s)" %
-            {'job': job, 'queue': queue, 'time': 12,
+            {'job': job, 'queue': queue, 'time': avg,
              'color': color, 'title': title, 'width': width})
 
 
@@ -80,7 +93,8 @@ def get_targets(target, colors, avg=12):
     width = 1
     for pipeline in PIPELINES:
         if target_in_pipeline(target, pipeline):
-            targets.append(failrate(target, pipeline, colors[color], width))
+            targets.append(
+                failrate(target, pipeline, colors[color], width, avg))
             width += 1
             color += 1
     return targets
@@ -91,11 +105,13 @@ def main():
     targetlist = ""
     colorpairs = 0
     for target in args.tests:
-        targets = get_targets(target, COLORS[colorpairs])
+        targets = get_targets(target, COLORS[colorpairs % len(COLORS)],
+                              avg=args.smoothing)
         colorpairs += 1
         subtarglist = "&".join(targets)
         targetlist = "&".join([targetlist, subtarglist])
-    url = "&".join((graphite_base_url(), targetlist))
+    url = "&".join((
+        graphite_base_url(args.duration, args.smoothing), targetlist))
     webbrowser.open(url)
     shortener = Shortener('TinyurlShortener')
     print "URL for sharing: %s" % shortener.short(url)
