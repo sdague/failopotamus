@@ -100,18 +100,23 @@ def get_targets(target, colors, avg=12):
     return targets
 
 
-def main():
-    args = parse_args()
+def get_graphite_url(tests, smoothing, duration):
     targetlist = ""
     colorpairs = 0
-    for target in args.tests:
+    for target in tests:
         targets = get_targets(target, COLORS[colorpairs % len(COLORS)],
-                              avg=args.smoothing)
+                              avg=smoothing)
         colorpairs += 1
         subtarglist = "&".join(targets)
         targetlist = "&".join([targetlist, subtarglist])
     url = "&".join((
-        graphite_base_url(args.duration, args.smoothing), targetlist))
+        graphite_base_url(duration, smoothing), targetlist))
+    return url
+
+
+def main():
+    args = parse_args()
+    url = get_graphite_url(args.tests, args.smoothing, args.duration)
     webbrowser.open(url)
     shortener = Shortener('TinyurlShortener')
     print "URL for sharing: %s" % shortener.short(url)
