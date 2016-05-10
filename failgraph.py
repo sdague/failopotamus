@@ -118,7 +118,7 @@ def main():
     args = parse_args()
     url = get_graphite_url(args.tests, args.smoothing, args.duration)
     webbrowser.open(url)
-    shortener = Shortener('TinyurlShortener')
+    shortener = Shortener('Tinyurl')
     print "URL for sharing: %s" % shortener.short(url)
 
 
