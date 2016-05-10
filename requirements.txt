@@ -1,1 +1,2 @@
-pyshorteners
+pyshorteners>=0.6.0
+requests
