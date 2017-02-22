@@ -1,1 +1,1 @@
-pyshorteners
+pyshorteners==0.6
